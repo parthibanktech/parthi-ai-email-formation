@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Node
+email_frontend/node_modules/
+email_frontend/dist/
+
+# Secrets
+backend/.env
+.env
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Docs
+*.md
+LINKEDIN_UNICODE_GUIDE.md
+MY_LINKEDIN_POST.md
