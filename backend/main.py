@@ -60,8 +60,10 @@ app.add_middleware(
 
 class EmailRequest(BaseModel):
     content: str
-    engine: str = "nlp"  # "nlp", "ollama", or "gemini"
+    engine: str = "nlp"        # "nlp", "ollama", "gemini", "openai"
     style: str = "professional" # "professional", "casual", "friendly", "concise"
+    gemini_api_key: str = ""   # Optional: from UI. Falls back to env GEMINI_API_KEY
+    openai_api_key: str = ""   # Optional: from UI. Falls back to env OPENAI_API_KEY
 
 # --- Helper Functions ---
 
@@ -213,10 +215,21 @@ async def get_ollama_response(text: str, style: str = "professional"):
     except Exception as e:
         return f"Ollama Connection Error: Ensure Ollama is running (`ollama run llama3.2`).\nDetails: {str(e)}"
 
-async def get_openai_response(text: str, style: str = "professional"):
-    """Call OpenAI GPT-4o-mini API for high-quality polishing"""
-    if not openai_client:
-        return "OpenAI Error: API Key not configured in .env file."
+async def get_openai_response(text: str, style: str = "professional", ui_api_key: str = ""):
+    """Call OpenAI GPT-4o-mini API for high-quality polishing.
+    Priority: UI key → env key → raise error.
+    """
+    from openai import OpenAI
+
+    # Resolve key: UI input takes priority over .env
+    resolved_key = ui_api_key.strip() or OPENAI_API_KEY
+    if not resolved_key:
+        raise HTTPException(
+            status_code=400,
+            detail="OpenAI API key is required. Provide it in the UI settings panel or set OPENAI_API_KEY in your .env file."
+        )
+
+    client = OpenAI(api_key=resolved_key)
 
     style_prompts = {
         "professional": "perfect, high-level business English. Sound corporate but clear.",
@@ -225,11 +238,11 @@ async def get_openai_response(text: str, style: str = "professional"):
         "concise": "extremely brief and direct. No fluff.",
         "creative": "engaging and vivid English."
     }
-    
+
     selected_style = style_prompts.get(style, style_prompts["professional"])
 
     try:
-        response = openai_client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a professional writing assistant. Always use the specified output format."},
@@ -238,14 +251,27 @@ async def get_openai_response(text: str, style: str = "professional"):
             temperature=0.5
         )
         return response.choices[0].message.content
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"DEBUG OPENAI ERROR: {str(e)}")
         return f"OpenAI Error: {str(e)}"
 
-async def get_gemini_response(text: str, style: str = "professional"):
-    """Call Google Gemini API for high-quality polishing"""
-    if not gemini_model:
-        return "Gemini Error: API Key not configured in .env file."
+async def get_gemini_response(text: str, style: str = "professional", ui_api_key: str = ""):
+    """Call Google Gemini API for high-quality polishing.
+    Priority: UI key → env key → raise error.
+    """
+    # Resolve key: UI input takes priority over .env
+    resolved_key = ui_api_key.strip() or GEMINI_API_KEY
+    if not resolved_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Gemini API key is required. Provide it in the UI settings panel or set GEMINI_API_KEY in your .env file."
+        )
+
+    # Build a per-request Gemini client with the resolved key
+    genai.configure(api_key=resolved_key)
+    gemini_model_instance = genai.GenerativeModel("gemini-pro")
 
     style_prompts = {
         "professional": "perfect, high-level business English. Make it sound corporate yet clear.",
@@ -282,15 +308,17 @@ async def get_gemini_response(text: str, style: str = "professional"):
             f"- [Note any significant contextual assumptions or entity extractions made]"
         )
 
-        response = await gemini_model.generate_content_async(
+        response = await gemini_model_instance.generate_content_async(
             contents=advanced_prompt,
             generation_config=genai.types.GenerationConfig(
                 candidate_count=1,
                 max_output_tokens=1000,
-                temperature=0.4, # Lower temperature for better accuracy in fixing typos
+                temperature=0.4,
             )
         )
         return response.text
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"DEBUG GEMINI ERROR: {str(e)}")
         return f"Gemini Error: {str(e)}"
@@ -327,24 +355,26 @@ async def analyze_email(request: EmailRequest):
     if request.engine == "ollama":
         polished_text = await get_ollama_response(text, request.style)
         engine_used = f"Ollama ({request.style.title()})"
-        # If Ollama fails, fallback to Smart NLP
         if "Error" in polished_text or "not found" in polished_text.lower():
             polished_text = elite_hybrid_polish(text, request.style)
             engine_used = f"Elite Hybrid Fallback (Ollama was unavailable)"
-            
+
     elif request.engine == "openai":
-        polished_text = await get_openai_response(text, request.style)
+        # Passes UI key; function resolves UI → env → error
+        polished_text = await get_openai_response(text, request.style, request.openai_api_key)
         engine_used = f"OpenAI ({request.style.title()})"
-        if "Error" in polished_text:
+        if isinstance(polished_text, str) and "OpenAI Error" in polished_text:
             polished_text = elite_hybrid_polish(text, request.style)
             engine_used = f"Elite Hybrid Fallback (OpenAI was unavailable)"
-            
+
     elif request.engine == "gemini":
-        polished_text = await get_gemini_response(text, request.style)
+        # Passes UI key; function resolves UI → env → error
+        polished_text = await get_gemini_response(text, request.style, request.gemini_api_key)
         engine_used = f"Gemini ({request.style.title()})"
-        if "Gemini Error" in polished_text or "Error" in polished_text:
+        if isinstance(polished_text, str) and "Gemini Error" in polished_text:
             polished_text = elite_hybrid_polish(text, request.style)
             engine_used = f"Elite Hybrid Fallback (Gemini was unavailable)"
+
     else:
         polished_text = elite_hybrid_polish(text, request.style)
         engine_used = f"Elite Hybrid Engine ({request.style.title()})"
