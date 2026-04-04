@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+spacy
+language-tool-python
+python-multipart
+textstat
+httpx
+python-dotenv
+google-generativeai
+openai
+transformers
+torch

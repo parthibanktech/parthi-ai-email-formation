@@ -1,0 +1,23 @@
+services:
+  # Backend FastAPI Service
+  - type: web
+    name: refine-ai-api
+    env: python
+    buildCommand: pip install -r backend/requirements.txt && python -m spacy download en_core_web_sm
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
+  # Frontend React Service
+  - type: web
+    name: refine-ai-ui
+    runtime: static
+    buildCommand: cd email_frontend && npm install && npm run build
+    publishPath: email_frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: refine-ai-api
+          type: web
+          property: host
