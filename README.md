@@ -1,6 +1,6 @@
 <div align="center">
 
-![Parthi AI Banner](docs/images/banner.png)
+![Parthi AI Banner](https://raw.githubusercontent.com/parthibanktech/parthi-ai-email-formation/main/docs/images/banner.png)
 
 # 🧠 Parthi AI: Email Formation
 
@@ -43,7 +43,7 @@ Whether you're writing a quick status update or a formal business proposal, just
 
 ## 🏗️ Architecture
 
-![Architecture Diagram](docs/images/architecture.png)
+![Architecture Diagram](https://raw.githubusercontent.com/parthibanktech/parthi-ai-email-formation/main/docs/images/architecture.png)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
