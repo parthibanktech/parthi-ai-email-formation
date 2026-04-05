@@ -58,6 +58,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"message": "Parthi AI Email Formation API is running successfully!", "status": "online"}
+
 class EmailRequest(BaseModel):
     content: str
     engine: str = "nlp"        # "nlp", "ollama", "gemini", "openai"
