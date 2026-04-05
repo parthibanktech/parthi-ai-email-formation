@@ -19,7 +19,4 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          name: refine-ai-api
-          type: web
-          property: url
+        value: https://refine-ai-api.onrender.com
