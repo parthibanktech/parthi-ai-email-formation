@@ -10,16 +10,15 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.9
 
-  # ── Frontend React Service ─────────────────────────────────
-  - type: web
+  # ── Frontend React Static Service ─────────────────────────
+  - type: static
     name: refine-ai-ui
-    runtime: static
     rootDir: email_frontend
     buildCommand: npm install && npm run build
-    publishPath: dist
+    staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
         fromService:
           name: refine-ai-api
           type: web
-          property: url # 🔴 Changed from 'host' to 'url' to get the public address
+          property: url
