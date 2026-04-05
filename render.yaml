@@ -12,10 +12,8 @@ services:
         value: 3.11.9
 
   # ── Frontend React Static Service ─────────────────────────
-  - type: web
+  - type: static
     name: refine-ai-ui
-    runtime: static
-    plan: free
     rootDir: email_frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
