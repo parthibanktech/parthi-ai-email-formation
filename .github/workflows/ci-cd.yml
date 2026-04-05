@@ -1,0 +1,62 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-ci:
+    name: Backend CI (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Smoke Test (Validate Syntax)
+        run: |
+          cd backend
+          python -c "import main; print('Backend syntax is valid!')"
+
+  frontend-ci:
+    name: Frontend CI (React/Vite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: email_frontend/package-lock.json
+          
+      - name: Install Dependencies
+        run: |
+          cd email_frontend
+          npm install
+          
+      - name: Build Frontend
+        run: |
+          cd email_frontend
+          npm run build
+          
+  deployment-status:
+    name: Continuous Deployment (Render)
+    needs: [backend-ci, frontend-ci]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Note
+        run: |
+          echo "CI Checks Passed! Render will now automatically deploy the latest changes from the 'main' branch."
